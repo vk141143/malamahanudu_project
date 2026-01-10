@@ -1,0 +1,5 @@
+#!/usr/bin/env python3
+"""
+Sample data generator for testing public APIs
+"""
+from sqlalchemy.orm import Session\nfrom app.database import SessionLocal, engine\nfrom app.models import Base, Admin\nfrom app.auth import get_password_hash\n\ndef create_public_test_data():\n    # Create tables\n    Base.metadata.create_all(bind=engine)\n    \n    db = SessionLocal()\n    \n    # Create admin if not exists\n    existing_admin = db.query(Admin).first()\n    if not existing_admin:\n        admin = Admin(\n            email=\"admin@example.com\",\n            hashed_password=get_password_hash(\"admin123\")\n        )\n        db.add(admin)\n        print(\"Admin created: admin@example.com / admin123\")\n    \n    db.commit()\n    db.close()\n    print(\"Database tables created successfully!\")\n    print(\"Public APIs are ready for testing:\")\n    print(\"- POST /public/donations\")\n    print(\"- POST /public/membership/apply\")\n    print(\"- POST /public/complaints\")\n    print(\"- GET /public/gallery\")\n\nif __name__ == \"__main__\":\n    create_public_test_data()
