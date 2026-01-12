@@ -30,7 +30,6 @@ from app.gallery import (
     get_gallery_summary, get_gallery_list, create_gallery_item, get_gallery_item_by_id,
     update_gallery_item, delete_gallery_item
 )
-from app.public.routes import router as public_router
 from typing import List, Optional
 import os
 
@@ -39,7 +38,7 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Admin Dashboard API")
 
-# Add CORS middleware
+# Add CORS middleware - MUST be added immediately after FastAPI() creation
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -55,9 +54,11 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"]
 )
 
-# Include public routes
+# Import and include routers AFTER CORS middleware
+from app.public.routes import router as public_router
 app.include_router(public_router)
 
 @app.post("/admin/login", response_model=Token)
