@@ -58,6 +58,22 @@ class S3Storage:
         except Exception as e:
             print(f"Failed to delete file from S3: {str(e)}")
             return False
+    
+    def upload_file_bytes(self, file_bytes, key: str) -> str:
+        """Upload bytes to S3 and return the URL"""
+        try:
+            self.s3_client.upload_fileobj(
+                file_bytes,
+                self.bucket_name,
+                key,
+                ExtraArgs={'ContentType': 'image/png'}
+            )
+            return f"https://{self.bucket_name}.s3.amazonaws.com/{key}"
+        except ClientError as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to upload to S3: {str(e)}"
+            )
 
 # Singleton instance
 s3_storage = S3Storage()

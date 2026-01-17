@@ -74,6 +74,7 @@ class Member(Base):
     status = Column(String, default="pending", index=True)
     is_active = Column(Boolean, default=True)
     id_card_generated = Column(Boolean, default=False)
+    qr_code_path = Column(String)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 class MemberApplication(Base):

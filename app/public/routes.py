@@ -16,35 +16,35 @@ MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 
 # Schemas
 class PublicDonationCreate(BaseModel):
-    full_name: str
+    full_name: Optional[str] = None
     email_address: Optional[EmailStr] = None
-    phone_number: str
-    payment_method: PaymentMethod
+    phone_number: Optional[str] = None
+    payment_method: Optional[PaymentMethod] = None
     preset_amount: Optional[float] = None
     custom_amount: Optional[float] = None
-    transaction_id: str
+    transaction_id: Optional[str] = None
     notes: Optional[str] = None
     
     @validator('phone_number')
     def validate_phone(cls, v):
-        if not re.match(r'^\d{10}$', v):
+        if v and not re.match(r'^\d{10}$', v):
             raise ValueError('Phone number must be exactly 10 digits')
         return v
 
 class PublicMembershipCreate(BaseModel):
-    full_name: str
-    father_husband_name: str
-    gender: Gender
-    date_of_birth: str  # dd-mm-yyyy format
-    caste: str
-    aadhaar_number: str
-    phone_number: str
+    full_name: Optional[str] = None
+    father_husband_name: Optional[str] = None
+    gender: Optional[Gender] = None
+    date_of_birth: Optional[str] = None  # dd-mm-yyyy format
+    caste: Optional[str] = None
+    aadhaar_number: Optional[str] = None
+    phone_number: Optional[str] = None
     email_address: Optional[EmailStr] = None
-    state: str
-    district: str
-    mandal: str
-    village: str
-    full_address: str
+    state: Optional[str] = None
+    district: Optional[str] = None
+    mandal: Optional[str] = None
+    village: Optional[str] = None
+    full_address: Optional[str] = None
     
     @validator('full_name', 'father_husband_name', 'caste')
     def validate_letters_only(cls, v):
@@ -138,12 +138,12 @@ async def create_donation(donation: PublicDonationCreate, db: Session = Depends(
     
     # Create donation record
     db_donation = Donation(
-        donor_name=donation.full_name,
+        donor_name=donation.full_name or "",
         donor_email=donation.email_address or "",
-        phone_number=donation.phone_number,
+        phone_number=donation.phone_number or "",
         amount=final_amount,
-        payment_method=donation.payment_method.value,
-        transaction_id=donation.transaction_id,
+        payment_method=donation.payment_method.value if donation.payment_method else "",
+        transaction_id=donation.transaction_id or "",
         notes=donation.notes,
         status="pending"
     )
@@ -160,19 +160,19 @@ async def create_donation(donation: PublicDonationCreate, db: Session = Depends(
 
 @router.post("/membership/apply")
 async def apply_membership(
-    full_name: str = Form(...),
-    father_husband_name: str = Form(...),
-    gender: Gender = Form(...),
-    date_of_birth: str = Form(...),
-    caste: str = Form(...),
-    aadhaar_number: str = Form(...),
-    phone_number: str = Form(...),
+    full_name: Optional[str] = Form(None),
+    father_husband_name: Optional[str] = Form(None),
+    gender: Optional[Gender] = Form(None),
+    date_of_birth: Optional[str] = Form(None),
+    caste: Optional[str] = Form(None),
+    aadhaar_number: Optional[str] = Form(None),
+    phone_number: Optional[str] = Form(None),
     email_address: Optional[str] = Form(None),
-    state: str = Form(...),
-    district: str = Form(...),
-    mandal: str = Form(...),
-    village: str = Form(...),
-    full_address: str = Form(...),
+    state: Optional[str] = Form(None),
+    district: Optional[str] = Form(None),
+    mandal: Optional[str] = Form(None),
+    village: Optional[str] = Form(None),
+    full_address: Optional[str] = Form(None),
     photo: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
@@ -203,13 +203,13 @@ async def apply_membership(
     photo_path = save_uploaded_file_to_s3(photo, "membership/photos")
     
     # Convert date format
-    dob = datetime.strptime(date_of_birth, '%d-%m-%Y').date()
+    dob = datetime.strptime(date_of_birth, '%d-%m-%Y').date() if date_of_birth else None
     
     # Create membership application
     db_application = MemberApplication(
         full_name=full_name,
         father_husband_name=father_husband_name,
-        gender=gender.value,
+        gender=gender.value if gender else None,
         date_of_birth=dob,
         caste=caste,
         aadhaar_number=aadhaar_number,

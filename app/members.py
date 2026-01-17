@@ -6,6 +6,9 @@ from typing import List, Optional
 import csv
 import io
 from fastapi.responses import StreamingResponse
+import qrcode
+from app.s3_storage import s3_storage
+from io import BytesIO
 
 def get_members_summary(db: Session) -> MembersSummary:
     """Get members summary for dashboard cards"""
@@ -68,10 +71,30 @@ def get_members_list(db: Session, filters: MemberFilters) -> MembersList:
     )
 
 def approve_member(db: Session, member_id: int) -> Optional[Member]:
-    """Approve a member"""
+    """Approve a member and generate QR code"""
     member = db.query(Member).filter(Member.id == member_id).first()
     if member:
         member.status = "approved"
+        
+        # Generate QR code with member details
+        qr_data = f"Member ID: {member.membership_id}\nName: {member.name}\nPhone: {member.phone}"
+        qr = qrcode.QRCode(version=1, box_size=10, border=5)
+        qr.add_data(qr_data)
+        qr.make(fit=True)
+        
+        # Create QR code image
+        qr_img = qr.make_image(fill_color="black", back_color="white")
+        
+        # Save to BytesIO
+        img_buffer = BytesIO()
+        qr_img.save(img_buffer, format='PNG')
+        img_buffer.seek(0)
+        
+        # Upload to S3
+        qr_filename = f"qr_{member.membership_id}.png"
+        qr_path = s3_storage.upload_file_bytes(img_buffer, f"members/qrcodes/{qr_filename}")
+        
+        member.qr_code_path = qr_path
         db.commit()
         db.refresh(member)
     return member
