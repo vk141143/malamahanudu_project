@@ -48,28 +48,29 @@ class PublicMembershipCreate(BaseModel):
     
     @validator('full_name', 'father_husband_name', 'caste')
     def validate_letters_only(cls, v):
-        if not re.match(r'^[a-zA-Z\s]+$', v):
+        if v and not re.match(r'^[a-zA-Z\s]+$', v):
             raise ValueError('Field must contain only letters and spaces')
         return v
     
     @validator('aadhaar_number')
     def validate_aadhaar(cls, v):
-        if not re.match(r'^\d{12}$', v):
+        if v and not re.match(r'^\d{12}$', v):
             raise ValueError('Aadhaar number must be exactly 12 digits')
         return v
     
     @validator('phone_number')
     def validate_phone(cls, v):
-        if not re.match(r'^\d{10}$', v):
+        if v and not re.match(r'^\d{10}$', v):
             raise ValueError('Phone number must be exactly 10 digits')
         return v
     
     @validator('date_of_birth')
     def validate_dob(cls, v):
-        try:
-            datetime.strptime(v, '%d-%m-%Y')
-        except ValueError:
-            raise ValueError('Date of birth must be in dd-mm-yyyy format')
+        if v:
+            try:
+                datetime.strptime(v, '%d-%m-%Y')
+            except ValueError:
+                raise ValueError('Date of birth must be in dd-mm-yyyy format')
         return v
 
 class PublicComplaintCreate(BaseModel):
@@ -173,7 +174,7 @@ async def apply_membership(
     mandal: Optional[str] = Form(None),
     village: Optional[str] = Form(None),
     full_address: Optional[str] = Form(None),
-    photo: UploadFile = File(...),
+    photo: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db)
 ):
     # Validate form data using Pydantic
@@ -200,7 +201,9 @@ async def apply_membership(
         )
     
     # Save photo to S3
-    photo_path = save_uploaded_file_to_s3(photo, "membership/photos")
+    photo_path = None
+    if photo:
+        photo_path = save_uploaded_file_to_s3(photo, "membership/photos")
     
     # Convert date format
     dob = datetime.strptime(date_of_birth, '%d-%m-%Y').date() if date_of_birth else None
