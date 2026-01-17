@@ -174,7 +174,7 @@ async def apply_membership(
     mandal: Optional[str] = Form(None),
     village: Optional[str] = Form(None),
     full_address: Optional[str] = Form(None),
-    photo: Optional[UploadFile] = File(None),
+    photo: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
     # Validate form data using Pydantic
@@ -201,9 +201,13 @@ async def apply_membership(
         )
     
     # Save photo to S3
-    photo_path = None
-    if photo:
-        photo_path = save_uploaded_file_to_s3(photo, "membership/photos")
+    if not photo:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Photo is required"
+        )
+    
+    photo_path = save_uploaded_file_to_s3(photo, "membership/photos")
     
     # Convert date format
     dob = datetime.strptime(date_of_birth, '%d-%m-%Y').date() if date_of_birth else None

@@ -279,6 +279,7 @@ async def approve_member_application(
         state=application.state,
         district=application.district,
         mandal=application.mandal,
+        photo_path=application.photo_path,
         status="approved"
     )
     

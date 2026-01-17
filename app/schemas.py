@@ -92,6 +92,8 @@ class MemberResponse(BaseModel):
     district: str
     mandal: str
     status: str
+    photo_path: Optional[str] = None
+    qr_code_path: Optional[str] = None
     created_at: datetime
     
     class Config:
