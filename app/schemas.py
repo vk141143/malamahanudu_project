@@ -160,14 +160,14 @@ class ComplaintsSummary(BaseModel):
 class ComplaintResponse(BaseModel):
     id: int
     complainant_name: str
-    email: str
+    email: Optional[str] = None
     phone: str
     type: str
     subject: str
     description: str
     reference_id: str
     status: str
-    admin_notes: Optional[str]
+    admin_notes: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     
