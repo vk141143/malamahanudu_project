@@ -79,8 +79,8 @@ class PublicComplaintCreate(BaseModel):
     phone_number: str
     address: str
     complaint_type: ComplaintType
-    subject: str
-    detailed_description: str
+    subject: Optional[str] = None
+    detailed_description: Optional[str] = None
     
     @validator('phone_number')
     def validate_phone(cls, v):
@@ -247,8 +247,8 @@ async def create_complaint(
     phone_number: str = Form(...),
     address: str = Form(...),
     complaint_type: ComplaintType = Form(...),
-    subject: str = Form(...),
-    detailed_description: str = Form(...),
+    subject: Optional[str] = Form(None),
+    detailed_description: Optional[str] = Form(None),
     email_address: Optional[str] = Form(None),
     supporting_document: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db)
@@ -285,8 +285,8 @@ async def create_complaint(
         phone=phone_number,
         address=address,
         type=complaint_type.value,
-        subject=subject,
-        description=detailed_description,
+        subject=subject or "",
+        description=detailed_description or "",
         reference_id=reference_id,
         supporting_document_path=document_path,
         status="pending"

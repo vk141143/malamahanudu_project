@@ -1,7 +1,9 @@
 from fastapi import FastAPI, Depends, HTTPException, status, Query, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
+import requests
 from app.database import get_db, engine
 from app.models import Base, Admin, Member, Donation, Complaint, Gallery
 from app.schemas import (
@@ -85,6 +87,12 @@ async def admin_logout(
 @app.get("/admin/dashboard", response_model=AdminResponse)
 async def admin_dashboard(current_admin: Admin = Depends(get_current_admin)):
     return current_admin
+
+@app.get("/admin/proxy-image")
+async def proxy_image(url: str):
+    """Proxy endpoint to serve S3 images without CORS issues"""
+    response = requests.get(url, stream=True)
+    return StreamingResponse(response.raw, media_type=response.headers.get('content-type', 'image/jpeg'))
 
 # Dashboard APIs
 @app.get("/admin/dashboard/summary", response_model=DashboardSummary)
@@ -271,7 +279,7 @@ async def approve_member_application(
     
     # Create member from application
     member = Member(
-        membership_id=f"MEM{str(uuid.uuid4())[:8].upper()}",
+        membership_id=f"MMN{str(uuid.uuid4())[:8].upper()}",
         name=application.full_name,
         phone=application.phone_number,
         email=application.email_address or "",
