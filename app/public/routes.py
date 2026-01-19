@@ -40,6 +40,7 @@ class PublicMembershipCreate(BaseModel):
     aadhaar_number: Optional[str] = None
     phone_number: Optional[str] = None
     email_address: Optional[EmailStr] = None
+    blood_group: Optional[str] = None
     state: Optional[str] = None
     district: Optional[str] = None
     mandal: Optional[str] = None
@@ -169,6 +170,7 @@ async def apply_membership(
     aadhaar_number: Optional[str] = Form(None),
     phone_number: Optional[str] = Form(None),
     email_address: Optional[str] = Form(None),
+    blood_group: Optional[str] = Form(None),
     state: Optional[str] = Form(None),
     district: Optional[str] = Form(None),
     mandal: Optional[str] = Form(None),
@@ -188,6 +190,7 @@ async def apply_membership(
             aadhaar_number=aadhaar_number,
             phone_number=phone_number,
             email_address=email_address,
+            blood_group=blood_group,
             state=state,
             district=district,
             mandal=mandal,
@@ -222,10 +225,11 @@ async def apply_membership(
         aadhaar_number=aadhaar_number,
         phone_number=phone_number,
         email_address=email_address,
+        blood_group=blood_group,
         state=state,
         district=district,
         mandal=mandal,
-        village=village,
+        village=village or "",
         full_address=full_address,
         photo_path=photo_path,
         status="pending"

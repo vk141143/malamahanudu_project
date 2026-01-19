@@ -90,6 +90,7 @@ class MemberApplication(Base):
     aadhaar_number = Column(String, index=True)
     phone_number = Column(String, index=True)
     email_address = Column(String)
+    blood_group = Column(String)
     state = Column(String)
     district = Column(String)
     mandal = Column(String)
