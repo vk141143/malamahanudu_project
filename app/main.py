@@ -255,8 +255,32 @@ async def get_member_applications(
     offset = (page - 1) * limit
     applications = query.order_by(MemberApplication.created_at.desc()).offset(offset).limit(limit).all()
     
+    # Serialize applications properly
+    applications_data = []
+    for app in applications:
+        applications_data.append({
+            "id": app.id,
+            "full_name": app.full_name,
+            "father_husband_name": app.father_husband_name,
+            "gender": app.gender,
+            "date_of_birth": app.date_of_birth.isoformat() if app.date_of_birth else None,
+            "caste": app.caste,
+            "aadhaar_number": app.aadhaar_number,
+            "phone_number": app.phone_number,
+            "email_address": app.email_address,
+            "blood_group": app.blood_group,
+            "state": app.state,
+            "district": app.district,
+            "mandal": app.mandal,
+            "village": app.village,
+            "full_address": app.full_address,
+            "photo_path": app.photo_path,
+            "status": app.status,
+            "created_at": app.created_at.isoformat() if app.created_at else None
+        })
+    
     return {
-        "applications": applications,
+        "applications": applications_data,
         "total": total,
         "page": page,
         "limit": limit,
