@@ -184,8 +184,8 @@ async def apply_membership(
             state=state or "",
             district=district or "",
             mandal=mandal or "",
-            village=village or "",
-            full_address=full_address or "",
+            village=village,
+            full_address=full_address,
             photo_path=photo_path,
             status="pending"
         )
