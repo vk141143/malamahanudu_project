@@ -1,9 +1,10 @@
-from fastapi import FastAPI, Depends, HTTPException, status, Query, UploadFile, File, Form
+from fastapi import FastAPI, Depends, HTTPException, status, Query, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 from sqlalchemy.orm import Session
 import requests
+import traceback
 from app.database import get_db, engine
 from app.models import Base, Admin, Member, Donation, Complaint, Gallery
 from app.schemas import (
@@ -62,6 +63,21 @@ app.add_middleware(
 # Import and include routers AFTER CORS middleware
 from app.public.routes import router as public_router
 app.include_router(public_router)
+
+# Global exception handler to ensure CORS headers on errors
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    print(f"Global exception: {str(exc)}")
+    print(traceback.format_exc())
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*",
+        }
+    )
 
 @app.post("/admin/login", response_model=Token)
 async def admin_login(admin_data: AdminLogin, db: Session = Depends(get_db)):
@@ -259,36 +275,41 @@ async def get_member_applications(
         # Serialize applications properly
         applications_data = []
         for app in applications:
-            applications_data.append({
-                "id": app.id,
-                "full_name": app.full_name or "",
-                "father_husband_name": app.father_husband_name or "",
-                "gender": app.gender or "",
-                "date_of_birth": app.date_of_birth.isoformat() if app.date_of_birth else None,
-                "caste": app.caste or "",
-                "aadhaar_number": app.aadhaar_number or "",
-                "phone_number": app.phone_number or "",
-                "email_address": app.email_address or "",
-                "blood_group": getattr(app, 'blood_group', None) or "",
-                "state": app.state or "",
-                "district": app.district or "",
-                "mandal": app.mandal or "",
-                "village": app.village or "",
-                "full_address": app.full_address or "",
-                "photo_path": app.photo_path or "",
-                "status": app.status or "pending",
-                "created_at": app.created_at.isoformat() if app.created_at else None
-            })
+            try:
+                applications_data.append({
+                    "id": app.id,
+                    "full_name": app.full_name or "",
+                    "father_husband_name": app.father_husband_name or "",
+                    "gender": app.gender or "",
+                    "date_of_birth": app.date_of_birth.isoformat() if app.date_of_birth else None,
+                    "caste": app.caste or "",
+                    "aadhaar_number": app.aadhaar_number or "",
+                    "phone_number": app.phone_number or "",
+                    "email_address": app.email_address or "",
+                    "blood_group": app.blood_group or "",
+                    "state": app.state or "",
+                    "district": app.district or "",
+                    "mandal": app.mandal or "",
+                    "village": app.village or "",
+                    "full_address": app.full_address or "",
+                    "photo_path": app.photo_path or "",
+                    "status": app.status or "pending",
+                    "created_at": app.created_at.isoformat() if app.created_at else None
+                })
+            except Exception as e:
+                print(f"Error serializing application {app.id}: {str(e)}")
+                continue
         
         return {
             "applications": applications_data,
             "total": total,
             "page": page,
             "limit": limit,
-            "total_pages": (total + limit - 1) // limit
+            "total_pages": (total + limit - 1) // limit if total > 0 else 0
         }
     except Exception as e:
         print(f"Error in get_member_applications: {str(e)}")
+        print(traceback.format_exc())
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error fetching applications: {str(e)}"

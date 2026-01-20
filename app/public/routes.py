@@ -34,45 +34,18 @@ class PublicDonationCreate(BaseModel):
 class PublicMembershipCreate(BaseModel):
     full_name: Optional[str] = None
     father_husband_name: Optional[str] = None
-    gender: Optional[Gender] = None
-    date_of_birth: Optional[str] = None  # dd-mm-yyyy format
+    gender: Optional[str] = None
+    date_of_birth: Optional[str] = None
     caste: Optional[str] = None
     aadhaar_number: Optional[str] = None
     phone_number: Optional[str] = None
-    email_address: Optional[EmailStr] = None
+    email_address: Optional[str] = None
     blood_group: Optional[str] = None
     state: Optional[str] = None
     district: Optional[str] = None
     mandal: Optional[str] = None
     village: Optional[str] = None
     full_address: Optional[str] = None
-    
-    @validator('full_name', 'father_husband_name', 'caste')
-    def validate_letters_only(cls, v):
-        if v and not re.match(r'^[a-zA-Z\s]+$', v):
-            raise ValueError('Field must contain only letters and spaces')
-        return v
-    
-    @validator('aadhaar_number')
-    def validate_aadhaar(cls, v):
-        if v and not re.match(r'^\d{12}$', v):
-            raise ValueError('Aadhaar number must be exactly 12 digits')
-        return v
-    
-    @validator('phone_number')
-    def validate_phone(cls, v):
-        if v and not re.match(r'^\d{10}$', v):
-            raise ValueError('Phone number must be exactly 10 digits')
-        return v
-    
-    @validator('date_of_birth')
-    def validate_dob(cls, v):
-        if v:
-            try:
-                datetime.strptime(v, '%d-%m-%Y')
-            except ValueError:
-                raise ValueError('Date of birth must be in dd-mm-yyyy format')
-        return v
 
 class PublicComplaintCreate(BaseModel):
     full_name: str
@@ -164,7 +137,7 @@ async def create_donation(donation: PublicDonationCreate, db: Session = Depends(
 async def apply_membership(
     full_name: Optional[str] = Form(None),
     father_husband_name: Optional[str] = Form(None),
-    gender: Optional[Gender] = Form(None),
+    gender: Optional[str] = Form(None),
     date_of_birth: Optional[str] = Form(None),
     caste: Optional[str] = Form(None),
     aadhaar_number: Optional[str] = Form(None),
@@ -179,71 +152,62 @@ async def apply_membership(
     photo: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
-    # Validate form data using Pydantic
     try:
-        membership_data = PublicMembershipCreate(
-            full_name=full_name,
-            father_husband_name=father_husband_name,
+        # Save photo to S3
+        if not photo or not photo.filename:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Photo is required"
+            )
+        
+        photo_path = save_uploaded_file_to_s3(photo, "membership/photos")
+        
+        # Convert date format
+        dob = None
+        if date_of_birth:
+            try:
+                dob = datetime.strptime(date_of_birth, '%d-%m-%Y').date()
+            except ValueError:
+                dob = None
+        
+        # Create membership application
+        db_application = MemberApplication(
+            full_name=full_name or "",
+            father_husband_name=father_husband_name or "",
             gender=gender,
-            date_of_birth=date_of_birth,
-            caste=caste,
-            aadhaar_number=aadhaar_number,
-            phone_number=phone_number,
-            email_address=email_address,
-            blood_group=blood_group,
-            state=state,
-            district=district,
-            mandal=mandal,
-            village=village,
-            full_address=full_address
+            date_of_birth=dob,
+            caste=caste or "",
+            aadhaar_number=aadhaar_number or "",
+            phone_number=phone_number or "",
+            email_address=email_address or "",
+            blood_group=blood_group or "",
+            state=state or "",
+            district=district or "",
+            mandal=mandal or "",
+            village=village or "",
+            full_address=full_address or "",
+            photo_path=photo_path,
+            status="pending"
         )
+        
+        db.add(db_application)
+        db.commit()
+        db.refresh(db_application)
+        
+        return {
+            "message": "Membership application submitted successfully",
+            "application_id": db_application.id,
+            "status": "pending"
+        }
+    except HTTPException:
+        raise
     except Exception as e:
+        db.rollback()
+        print(f"Error in apply_membership: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to submit application: {str(e)}"
         )
-    
-    # Save photo to S3
-    if not photo:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Photo is required"
-        )
-    
-    photo_path = save_uploaded_file_to_s3(photo, "membership/photos")
-    
-    # Convert date format
-    dob = datetime.strptime(date_of_birth, '%d-%m-%Y').date() if date_of_birth else None
-    
-    # Create membership application
-    db_application = MemberApplication(
-        full_name=full_name,
-        father_husband_name=father_husband_name,
-        gender=gender.value if gender else None,
-        date_of_birth=dob,
-        caste=caste,
-        aadhaar_number=aadhaar_number,
-        phone_number=phone_number,
-        email_address=email_address,
-        blood_group=blood_group,
-        state=state,
-        district=district,
-        mandal=mandal,
-        village=village or "",
-        full_address=full_address,
-        photo_path=photo_path,
-        status="pending"
-    )
-    
-    db.add(db_application)
-    db.commit()
-    db.refresh(db_application)
-    
-    return {
-        "message": "Membership application submitted successfully",
-        "application_id": db_application.id,
-        "status": "pending"
-    }
 
 @router.post("/complaints")
 async def create_complaint(
