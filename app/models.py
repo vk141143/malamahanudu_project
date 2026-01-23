@@ -68,6 +68,7 @@ class Member(Base):
     phone = Column(String, nullable=False, index=True)
     email = Column(String, nullable=False, index=True)
     aadhaar = Column(String, nullable=False, index=True)
+    blood_group = Column(String)
     state = Column(String, nullable=False, index=True)
     district = Column(String, nullable=False, index=True)
     mandal = Column(String, nullable=False, index=True)

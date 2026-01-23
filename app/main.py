@@ -336,6 +336,7 @@ async def approve_member_application(
         phone=application.phone_number,
         email=application.email_address or "",
         aadhaar=application.aadhaar_number,
+        blood_group=application.blood_group,
         state=application.state,
         district=application.district,
         mandal=application.mandal,
