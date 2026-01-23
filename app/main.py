@@ -64,6 +64,11 @@ app.add_middleware(
 from app.public.routes import router as public_router
 app.include_router(public_router)
 
+# Root route to handle base URL requests
+@app.get("/")
+async def root():
+    return {"message": "Malamahanadu API is running", "status": "active"}
+
 # Global exception handler to ensure CORS headers on errors
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):

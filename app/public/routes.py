@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query
+from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Donation, MemberApplication, Complaint, Gallery, PaymentMethod, Gender, ComplaintType, MediaType
@@ -288,3 +289,76 @@ async def get_gallery(
         items=[PublicGalleryResponse.from_orm(item) for item in items],
         total=len(items)
     )
+
+@router.get("/member/{membership_id}")
+async def get_member_profile(membership_id: str, db: Session = Depends(get_db)):
+    """Get member profile by membership ID for QR code scanning"""
+    from app.models import Member
+    from fastapi.responses import HTMLResponse
+    
+    member = db.query(Member).filter(Member.membership_id == membership_id).first()
+    if not member:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Member not found"
+        )
+    
+    # Return HTML for better user experience when scanning QR code
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Member Profile - {member.name}</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body {{ font-family: Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }}
+            .card {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); max-width: 400px; margin: 0 auto; }}
+            .header {{ text-align: center; color: #333; border-bottom: 2px solid #007bff; padding-bottom: 10px; margin-bottom: 20px; }}
+            .field {{ margin: 10px 0; }}
+            .label {{ font-weight: bold; color: #555; }}
+            .value {{ color: #333; }}
+            .status {{ padding: 4px 8px; border-radius: 4px; color: white; font-size: 12px; }}
+            .approved {{ background-color: #28a745; }}
+            .pending {{ background-color: #ffc107; color: #000; }}
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <div class="header">
+                <h2>Malamahanadu Member</h2>
+                <h3>{member.name}</h3>
+            </div>
+            <div class="field">
+                <span class="label">Membership ID:</span>
+                <span class="value">{member.membership_id}</span>
+            </div>
+            <div class="field">
+                <span class="label">Phone:</span>
+                <span class="value">{member.phone}</span>
+            </div>
+            <div class="field">
+                <span class="label">Email:</span>
+                <span class="value">{member.email}</span>
+            </div>
+            <div class="field">
+                <span class="label">Blood Group:</span>
+                <span class="value">{member.blood_group or 'Not specified'}</span>
+            </div>
+            <div class="field">
+                <span class="label">Location:</span>
+                <span class="value">{member.mandal}, {member.district}, {member.state}</span>
+            </div>
+            <div class="field">
+                <span class="label">Status:</span>
+                <span class="status {'approved' if member.status == 'approved' else 'pending'}">{member.status.upper()}</span>
+            </div>
+            <div class="field">
+                <span class="label">Member Since:</span>
+                <span class="value">{member.created_at.strftime('%B %d, %Y')}</span>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    return HTMLResponse(content=html_content)
