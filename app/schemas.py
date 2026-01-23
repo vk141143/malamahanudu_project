@@ -88,6 +88,7 @@ class MemberResponse(BaseModel):
     phone: str
     email: str
     aadhaar: str
+    blood_group: Optional[str] = None
     state: str
     district: str
     mandal: str
