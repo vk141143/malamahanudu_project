@@ -254,6 +254,26 @@ async def reject_member_action(
         )
     return member
 
+@app.post("/admin/members/{member_id}/cancel")
+async def cancel_member_action(
+    member_id: int,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Cancel a member's membership"""
+    member = db.query(Member).filter(Member.id == member_id).first()
+    if not member:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Member not found"
+        )
+    
+    member.status = "cancelled"
+    db.commit()
+    db.refresh(member)
+    
+    return {"message": "Membership cancelled successfully", "member_id": member_id}
+
 @app.put("/admin/members/{member_id}", response_model=MemberResponse)
 async def update_member(
     member_id: int,
