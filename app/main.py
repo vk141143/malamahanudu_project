@@ -254,6 +254,37 @@ async def reject_member_action(
         )
     return member
 
+@app.put("/admin/members/{member_id}", response_model=MemberResponse)
+async def update_member(
+    member_id: int,
+    designation: Optional[str] = Form(None),
+    father_husband_name: Optional[str] = Form(None),
+    full_address: Optional[str] = Form(None),
+    village: Optional[str] = Form(None),
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Update member details"""
+    member = db.query(Member).filter(Member.id == member_id).first()
+    if not member:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Member not found"
+        )
+    
+    if designation is not None:
+        member.designation = designation
+    if father_husband_name is not None:
+        member.father_husband_name = father_husband_name
+    if full_address is not None:
+        member.full_address = full_address
+    if village is not None:
+        member.village = village
+    
+    db.commit()
+    db.refresh(member)
+    return member
+
 
 # Member Applications APIs
 @app.get("/admin/member-applications")
@@ -292,6 +323,7 @@ async def get_member_applications(
                     "phone_number": app.phone_number or "",
                     "email_address": app.email_address or "",
                     "blood_group": app.blood_group or "",
+                    "designation": app.designation or "",
                     "state": app.state or "",
                     "district": app.district or "",
                     "mandal": app.mandal or "",
@@ -342,9 +374,13 @@ async def approve_member_application(
         email=application.email_address or "",
         aadhaar=application.aadhaar_number,
         blood_group=application.blood_group,
+        designation=application.designation,
+        father_husband_name=application.father_husband_name,
         state=application.state,
         district=application.district,
         mandal=application.mandal,
+        village=application.village,
+        full_address=application.full_address,
         photo_path=application.photo_path,
         status="approved"
     )

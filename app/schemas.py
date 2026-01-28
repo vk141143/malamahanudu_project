@@ -89,9 +89,13 @@ class MemberResponse(BaseModel):
     email: str
     aadhaar: str
     blood_group: Optional[str] = None
+    designation: Optional[str] = None
+    father_husband_name: Optional[str] = None
     state: str
     district: str
     mandal: str
+    village: Optional[str] = None
+    full_address: Optional[str] = None
     status: str
     photo_path: Optional[str] = None
     qr_code_path: Optional[str] = None
