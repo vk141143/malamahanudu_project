@@ -36,9 +36,6 @@ from app.gallery import (
 from typing import List, Optional
 import os
 
-# Create tables
-Base.metadata.create_all(bind=engine)
-
 app = FastAPI(title="Admin Dashboard API")
 
 # Add CORS middleware - MUST be added immediately after FastAPI() creation
