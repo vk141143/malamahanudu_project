@@ -38,9 +38,16 @@ class S3Storage:
             return s3_url
             
         except ClientError as e:
+            print(f"S3 upload error: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to upload file to S3: {str(e)}"
+            )
+        except Exception as e:
+            print(f"Unexpected upload error: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to upload file: {str(e)}"
             )
     
     def delete_file(self, file_url: str) -> bool:
@@ -70,6 +77,7 @@ class S3Storage:
             )
             return f"https://{self.bucket_name}.s3.amazonaws.com/{key}"
         except ClientError as e:
+            print(f"S3 upload bytes error: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to upload to S3: {str(e)}"

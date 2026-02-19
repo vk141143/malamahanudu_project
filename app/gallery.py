@@ -74,22 +74,32 @@ def save_uploaded_file(file: UploadFile) -> tuple[str, str]:
 
 def create_gallery_item(db: Session, gallery_data: GalleryCreate, file: UploadFile) -> Gallery:
     """Create new gallery item with file upload"""
-    # Save uploaded file
-    media_url, media_type = save_uploaded_file(file)
-    
-    # Create gallery item
-    gallery_item = Gallery(
-        title=gallery_data.title,
-        description=gallery_data.description,
-        media_url=media_url,
-        media_type=media_type
-    )
-    
-    db.add(gallery_item)
-    db.commit()
-    db.refresh(gallery_item)
-    
-    return gallery_item
+    try:
+        # Save uploaded file
+        media_url, media_type = save_uploaded_file(file)
+        
+        # Create gallery item
+        gallery_item = Gallery(
+            title=gallery_data.title,
+            description=gallery_data.description,
+            media_url=media_url,
+            media_type=media_type
+        )
+        
+        db.add(gallery_item)
+        db.commit()
+        db.refresh(gallery_item)
+        
+        return gallery_item
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"Error creating gallery item: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create gallery item: {str(e)}"
+        )
 
 def get_gallery_item_by_id(db: Session, item_id: int) -> Optional[Gallery]:
     """Get gallery item by ID"""
