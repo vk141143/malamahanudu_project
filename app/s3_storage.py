@@ -21,8 +21,15 @@ class S3Storage:
     def upload_file(self, file: UploadFile, folder: str = "uploads") -> str:
         """Upload file to S3 and return the URL"""
         try:
+            # Validate file and filename
+            if not file or not file.filename:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid file or missing filename"
+                )
+            
             # Generate unique filename
-            file_extension = Path(file.filename).suffix.lower()
+            file_extension = Path(str(file.filename)).suffix.lower()
             unique_filename = f"{folder}/{uuid.uuid4()}{file_extension}"
             
             # Upload to S3
@@ -30,7 +37,7 @@ class S3Storage:
                 file.file,
                 self.bucket_name,
                 unique_filename,
-                ExtraArgs={'ContentType': file.content_type}
+                ExtraArgs={'ContentType': file.content_type or 'application/octet-stream'}
             )
             
             # Return S3 URL

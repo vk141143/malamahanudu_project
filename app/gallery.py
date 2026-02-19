@@ -51,8 +51,21 @@ def get_gallery_list(db: Session, filters: GalleryFilters) -> GalleryList:
 
 def save_uploaded_file(file: UploadFile) -> tuple[str, str]:
     """Save uploaded file to S3 and return URL and media type"""
+    # Validate filename exists
+    if not file.filename:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File must have a filename"
+        )
+    
     # Get file extension
-    file_extension = Path(file.filename).suffix.lower()
+    file_extension = Path(str(file.filename)).suffix.lower()
+    
+    if not file_extension:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File must have an extension"
+        )
     
     # Determine media type
     if file_extension in ALLOWED_IMAGE_EXTENSIONS:

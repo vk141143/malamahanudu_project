@@ -168,9 +168,15 @@ async def apply_membership(
         dob = None
         if date_of_birth:
             try:
-                dob = datetime.strptime(date_of_birth, '%d-%m-%Y').date()
+                dob = datetime.strptime(date_of_birth, '%d/%m/%Y').date()
             except ValueError:
-                dob = None
+                try:
+                    dob = datetime.strptime(date_of_birth, '%d-%m-%Y').date()
+                except ValueError:
+                    try:
+                        dob = datetime.strptime(date_of_birth, '%Y-%m-%d').date()
+                    except ValueError:
+                        pass
         
         # Create membership application
         db_application = MemberApplication(
