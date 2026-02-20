@@ -81,19 +81,37 @@ class PublicGalleryList(BaseModel):
 # Helper functions
 def save_uploaded_file_to_s3(file: UploadFile, folder: str) -> str:
     """Upload file to S3 and return URL"""
-    # Validate file size
-    file.file.seek(0, 2)
-    file_size = file.file.tell()
-    file.file.seek(0)
-    
-    if file_size > MAX_FILE_SIZE:
+    try:
+        # Validate file
+        if not file or not file.filename:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid file"
+            )
+        
+        # Validate file size
+        file.file.seek(0, 2)
+        file_size = file.file.tell()
+        file.file.seek(0)
+        
+        if file_size > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="File size exceeds 5MB limit"
+            )
+        
+        # Upload to S3
+        return s3_storage.upload_file(file, folder)
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error in save_uploaded_file_to_s3: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="File size exceeds 5MB limit"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to upload file: {str(e)}"
         )
-    
-    # Upload to S3
-    return s3_storage.upload_file(file, folder)
 
 def generate_reference_id() -> str:
     today = datetime.now().strftime('%Y%m%d')
@@ -155,46 +173,47 @@ async def apply_membership(
     db: Session = Depends(get_db)
 ):
     try:
-        # Save photo to S3
+        # Validate photo
         if not photo or not photo.filename:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Photo is required"
             )
         
+        # Save photo to S3
         photo_path = save_uploaded_file_to_s3(photo, "membership/photos")
         
         # Convert date format
         dob = None
         if date_of_birth:
             try:
-                dob = datetime.strptime(date_of_birth, '%d/%m/%Y').date()
+                dob = datetime.strptime(str(date_of_birth), '%d/%m/%Y').date()
             except ValueError:
                 try:
-                    dob = datetime.strptime(date_of_birth, '%d-%m-%Y').date()
+                    dob = datetime.strptime(str(date_of_birth), '%d-%m-%Y').date()
                 except ValueError:
                     try:
-                        dob = datetime.strptime(date_of_birth, '%Y-%m-%d').date()
+                        dob = datetime.strptime(str(date_of_birth), '%Y-%m-%d').date()
                     except ValueError:
                         pass
         
         # Create membership application
         db_application = MemberApplication(
-            full_name=full_name or "",
-            father_husband_name=father_husband_name or "",
-            gender=gender,
+            full_name=str(full_name or ""),
+            father_husband_name=str(father_husband_name or ""),
+            gender=str(gender or ""),
             date_of_birth=dob,
-            caste=caste or "",
-            aadhaar_number=aadhaar_number or "",
-            phone_number=phone_number or "",
-            email_address=email_address or "",
-            blood_group=blood_group or "",
-            designation=designation or "",
-            state=state or "",
-            district=district or "",
-            mandal=mandal or "",
-            village=village,
-            full_address=full_address,
+            caste=str(caste or ""),
+            aadhaar_number=str(aadhaar_number or ""),
+            phone_number=str(phone_number or ""),
+            email_address=str(email_address or ""),
+            blood_group=str(blood_group or ""),
+            designation=str(designation or ""),
+            state=str(state or ""),
+            district=str(district or ""),
+            mandal=str(mandal or ""),
+            village=str(village or "") if village else None,
+            full_address=str(full_address or "") if full_address else None,
             photo_path=photo_path,
             status="pending"
         )
@@ -213,6 +232,8 @@ async def apply_membership(
     except Exception as e:
         db.rollback()
         print(f"Error in apply_membership: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to submit application: {str(e)}"
